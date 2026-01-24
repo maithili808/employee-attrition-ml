@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee Attrition Predictor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>Employee Attrition Prediction</h2>
+
+<form action="/predict" method="post">
+
+    <!-- NUMERIC -->
+    <label>Age</label>
+    <input type="number" name="Age" required>
+
+    <label>Daily Rate</label>
+    <select name="DailyRate" required>
+        <option value="300">Low</option>
+        <option value="600">Medium</option>
+        <option value="900">High</option>
+        <option value="1200">Very High</option>
+    </select>
+
+    <label>Distance From Home</label>
+    <select name="DistanceFromHome" required>
+        <option value="2">0–5 km</option>
+        <option value="8">6–10 km</option>
+        <option value="15">11–20 km</option>
+        <option value="30">20+ km</option>
+    </select>
+
+    <label>Education (1=Below College, 5=Doctor)</label>
+    <select name="Education">
+        <option value="1">Below College</option>
+        <option value="2">College</option>
+        <option value="3">Bachelor</option>
+        <option value="4">Master</option>
+        <option value="5">Doctor</option>
+    </select>
+
+    <label>Environment Satisfaction</label>
+    <select name="EnvironmentSatisfaction">
+        <option value="1">Low</option>
+        <option value="2">Medium</option>
+        <option value="3">High</option>
+        <option value="4">Very High</option>
+    </select>
+
+    <label>Hourly Rate</label>
+    <select name="HourlyRate">
+        <option value="30">Low</option>
+        <option value="60">Medium</option>
+        <option value="90">High</option>
+    </select>
+
+    <label>Job Involvement</label>
+    <select name="JobInvolvement">
+        <option value="1">Low</option>
+        <option value="2">Medium</option>
+        <option value="3">High</option>
+        <option value="4">Very High</option>
+    </select>
+
+    <label>Job Level</label>
+    <select name="JobLevel">
+        <option value="1">Entry</option>
+        <option value="2">Junior</option>
+        <option value="3">Mid</option>
+        <option value="4">Senior</option>
+        <option value="5">Executive</option>
+    </select>
+
+    <label>Job Satisfaction</label>
+    <select name="JobSatisfaction">
+        <option value="1">Low</option>
+        <option value="2">Medium</option>
+        <option value="3">High</option>
+        <option value="4">Very High</option>
+    </select>
+
+    <label>Monthly Income</label>
+    <select name="MonthlyIncome">
+        <option value="3000">Low</option>
+        <option value="7000">Medium</option>
+        <option value="12000">High</option>
+        <option value="20000">Very High</option>
+    </select>
+
+    <label>Monthly Rate</label>
+    <select name="MonthlyRate">
+        <option value="8000">Low</option>
+        <option value="15000">Medium</option>
+        <option value="25000">High</option>
+    </select>
+
+    <label>Companies Worked</label>
+    <select name="NumCompaniesWorked">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3+</option>
+    </select>
+
+    <label>Percent Salary Hike</label>
+    <select name="PercentSalaryHike">
+        <option value="10">Low</option>
+        <option value="15">Medium</option>
+        <option value="20">High</option>
+    </select>
+
+    <label>Performance Rating</label>
+    <select name="PerformanceRating">
+        <option value="3">Good</option>
+        <option value="4">Excellent</option>
+    </select>
+
+    <label>Relationship Satisfaction</label>
+    <select name="RelationshipSatisfaction">
+        <option value="1">Low</option>
+        <option value="2">Medium</option>
+        <option value="3">High</option>
+        <option value="4">Very High</option>
+    </select>
+
+    <label>Stock Option Level</label>
+    <select name="StockOptionLevel">
+        <option value="0">None</option>
+        <option value="1">Low</option>
+        <option value="2">Medium</option>
+        <option value="3">High</option>
+    </select>
+
+    <label>Total Working Years</label>
+    <select name="TotalWorkingYears">
+        <option value="1">0–2</option>
+        <option value="5">3–5</option>
+        <option value="10">6–10</option>
+        <option value="20">10+</option>
+    </select>
+
+    <label>Training Last Year</label>
+    <select name="TrainingTimesLastYear">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3+</option>
+    </select>
+
+    <label>Work Life Balance</label>
+    <select name="WorkLifeBalance">
+        <option value="1">Bad</option>
+        <option value="2">Okay</option>
+        <option value="3">Good</option>
+        <option value="4">Excellent</option>
+    </select>
+
+    <label>Years At Company</label>
+    <select name="YearsAtCompany">
+        <option value="1">0–2</option>
+        <option value="5">3–5</option>
+        <option value="10">6–10</option>
+        <option value="20">10+</option>
+    </select>
+
+    <label>Years In Current Role</label>
+    <select name="YearsInCurrentRole">
+        <option value="1">0–2</option>
+        <option value="5">3–5</option>
+        <option value="10">6–10</option>
+    </select>
+
+    <label>Years Since Last Promotion</label>
+    <select name="YearsSinceLastPromotion">
+        <option value="0">0</option>
+        <option value="2">1–2</option>
+        <option value="5">3–5</option>
+        <option value="10">5+</option>
+    </select>
+
+    <label>Years With Current Manager</label>
+    <select name="YearsWithCurrManager">
+        <option value="1">0–2</option>
+        <option value="5">3–5</option>
+        <option value="10">6–10</option>
+    </select>
+
+    <!-- CATEGORICAL -->
+    <label>Business Travel</label>
+    <select name="BusinessTravel">
+        <option value="Non-Travel">Non-Travel</option>
+        <option value="Travel_Rarely">Travel Rarely</option>
+        <option value="Travel_Frequently">Travel Frequently</option>
+    </select>
+
+    <label>Department</label>
+    <select name="Department">
+        <option value="Sales">Sales</option>
+        <option value="Research & Development">R&D</option>
+        <option value="Human Resources">HR</option>
+    </select>
+
+    <label>Education Field</label>
+    <select name="EducationField">
+        <option value="Life Sciences">Life Sciences</option>
+        <option value="Medical">Medical</option>
+        <option value="Marketing">Marketing</option>
+        <option value="Technical Degree">Technical</option>
+        <option value="Other">Other</option>
+    </select>
+
+    <label>Gender</label>
+    <select name="Gender">
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select>
+
+    <label>Job Role</label>
+    <select name="JobRole">
+        <option value="Sales Executive">Sales Executive</option>
+        <option value="Research Scientist">Research Scientist</option>
+        <option value="Laboratory Technician">Lab Technician</option>
+        <option value="Manufacturing Director">Manufacturing Director</option>
+        <option value="Healthcare Representative">Healthcare Rep</option>
+        <option value="Manager">Manager</option>
+    </select>
+
+    <label>Marital Status</label>
+    <select name="MaritalStatus">
+        <option value="Single">Single</option>
+        <option value="Married">Married</option>
+        <option value="Divorced">Divorced</option>
+    </select>
+
+    <label>OverTime</label>
+    <select name="OverTime">
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+    </select>
+
+    <br><br>
+    <button type="submit">Predict</button>
+</form>
+
+{% if prediction %}
+    <h3>Prediction: {{ prediction }}</h3>
+    <p>Probability: {{ probability }}%</p>
+{% endif %}
+
+</body>
+</html>

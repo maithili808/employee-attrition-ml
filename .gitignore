@@ -1,0 +1,14 @@
+# Virtual environment
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+
+# Model artifacts (optional if very large)
+# *.pkl
