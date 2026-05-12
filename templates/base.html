@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttritionIQ — {% block title %}HR Dashboard{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:       #0b0e1a;
+  --bg2:      #111527;
+  --bg3:      #181d35;
+  --bg4:      #1e2440;
+  --surface:  #232a4a;
+  --surface2: #2a3257;
+  --border:   rgba(100,120,255,0.10);
+  --border2:  rgba(100,120,255,0.20);
+  --accent:   #5b6ef5;
+  --accent2:  #7c8fff;
+  --accent3:  #a0aaff;
+  --cyan:     #38d9c0;
+  --amber:    #f5a623;
+  --red:      #f55b5b;
+  --green:    #3de5a0;
+  --text:     #e8ecff;
+  --text2:    #9aa3cc;
+  --text3:    #5c6490;
+  --font:     'DM Sans', sans-serif;
+  --serif:    'DM Serif Display', serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── Sidebar ── */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+.sidebar {
+  width: 224px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.sb-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-weight: 700; font-size: 13px; color: #fff;
+}
+.sb-name { font-family: var(--serif); font-size: 16px; letter-spacing: -0.2px; }
+.sb-name span { color: var(--accent2); }
+.sb-nav { flex: 1; padding: 10px 8px; overflow-y: auto; }
+.sb-section {
+  font-size: 9.5px; font-weight: 600; color: var(--text3);
+  letter-spacing: 1.1px; text-transform: uppercase;
+  padding: 14px 10px 5px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 11px; border-radius: 8px;
+  font-size: 13px; color: var(--text2);
+  text-decoration: none; transition: all 0.15s; margin-bottom: 1px;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active { background: rgba(91,110,245,0.14); color: var(--accent2); }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; background: var(--accent); color: #fff;
+  font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 20px;
+}
+.sb-user {
+  border-top: 1px solid var(--border); padding: 12px 14px;
+  display: flex; align-items: center; gap: 9px;
+}
+.user-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 12px; font-weight: 600; color: #fff;
+  flex-shrink: 0;
+}
+.user-name { font-size: 12px; font-weight: 500; }
+.user-role { font-size: 10.5px; color: var(--text3); }
+.logout-link {
+  margin-left: auto; color: var(--text3); text-decoration: none;
+  font-size: 13px; transition: color 0.2s; padding: 4px;
+}
+.logout-link:hover { color: var(--red); }
+
+/* ── Main ── */
+.main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(11,14,26,0.90); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 13px 26px;
+  display: flex; align-items: center; gap: 14px;
+}
+.page-title { font-size: 16px; font-weight: 600; flex: 1; }
+.page-sub { font-size: 11px; color: var(--text3); }
+.topbar-right { display: flex; gap: 8px; align-items: center; }
+.pill {
+  padding: 6px 14px; border-radius: 7px;
+  border: 1px solid var(--border2);
+  background: transparent; color: var(--text2);
+  font-family: var(--font); font-size: 12px; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+  transition: all 0.15s;
+}
+.pill:hover { background: var(--surface); color: var(--text); }
+.pill.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill.primary:hover { background: var(--accent2); }
+.content { padding: 24px 26px; flex: 1; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+.card-body { padding: 22px; }
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 13px; font-weight: 600; }
+.card-badge {
+  font-size: 10.5px; color: var(--accent2);
+  background: rgba(91,110,245,0.11);
+  padding: 2px 9px; border-radius: 20px;
+}
+
+/* ── Stat cards ── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 13px; padding: 18px 20px; position: relative; overflow: hidden;
+}
+.stat-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.blue::after  { background: var(--accent); }
+.stat-card.red::after   { background: var(--red); }
+.stat-card.amber::after { background: var(--amber); }
+.stat-card.cyan::after  { background: var(--cyan); }
+.stat-label { font-size: 10.5px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 9px; }
+.stat-value { font-size: 28px; font-weight: 300; font-family: var(--serif); }
+.stat-delta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.delta-up   { color: var(--green); }
+.delta-down { color: var(--red); }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead th {
+  padding: 9px 18px; text-align: left;
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.7px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3); white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg3); }
+tbody td { padding: 11px 18px; color: var(--text2); vertical-align: middle; }
+.td-main { color: var(--text); font-weight: 500; }
+.td-mono { font-family: var(--mono); font-size: 11px; color: var(--accent3); }
+
+/* ── Risk chips ── */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.chip-high   { background: rgba(245,91,91,0.15);  color: #f88; }
+.chip-medium { background: rgba(245,166,35,0.15); color: #f5a623; }
+.chip-low    { background: rgba(61,229,160,0.15); color: #3de5a0; }
+.chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.chip-yes { background: rgba(245,91,91,0.13); color: #f88; }
+.chip-no  { background: rgba(61,229,160,0.13); color: #3de5a0; }
+
+/* ── Form ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-group label {
+  display: block; font-size: 10px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px;
+}
+.form-control {
+  width: 100%; background: var(--bg3);
+  border: 1px solid var(--border2); border-radius: 8px;
+  padding: 9px 12px; color: var(--text);
+  font-family: var(--font); font-size: 13px; outline: none;
+  transition: border-color 0.2s;
+}
+.form-control:focus { border-color: var(--accent); }
+select.form-control { cursor: pointer; }
+.form-section-title {
+  font-size: 11px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.submit-btn {
+  width: 100%; padding: 12px; border-radius: 9px;
+  background: var(--accent); border: none; color: #fff;
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.2s; margin-top: 8px;
+}
+.submit-btn:hover { background: var(--accent2); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 2px; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 48px 20px; color: var(--text3); }
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+.empty-text { font-size: 13px; }
+
+/* ── Flash / alert ── */
+.alert {
+  border-radius: 9px; padding: 11px 16px; margin-bottom: 16px;
+  font-size: 13px; display: flex; align-items: center; gap: 8px;
+}
+.alert-error   { background: rgba(245,91,91,0.12); border: 1px solid rgba(245,91,91,0.25); color: #f88; }
+.alert-success { background: rgba(61,229,160,0.10); border: 1px solid rgba(61,229,160,0.25); color: var(--green); }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">A</div>
+      <div class="sb-name">Attrition<span>IQ</span></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Overview</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-item {% if page=='dashboard' %}active{% endif %}">
+        <span class="nav-icon">◈</span> Dashboard
+      </a>
+      <div class="sb-section">Predictions</div>
+      <a href="{{ url_for('predict') }}" class="nav-item {% if page=='predict' %}active{% endif %}">
+        <span class="nav-icon">⬡</span> Run Prediction
+      </a>
+      <a href="{{ url_for('history') }}" class="nav-item {% if page=='history' %}active{% endif %}">
+        <span class="nav-icon">◷</span> History
+        {% if total_preds is defined and total_preds > 0 %}
+        <span class="nav-badge">{{ total_preds }}</span>
+        {% endif %}
+      </a>
+    </nav>
+    <div class="sb-user">
+      <div class="user-av">{{ user.initials }}</div>
+      <div>
+        <div class="user-name">{{ user.role }}</div>
+        <div class="user-role">{{ user.email }}</div>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-link" title="Logout">✕</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">{% block topbar_title %}Dashboard{% endblock %}</div>
+        <div class="page-sub">{% block topbar_sub %}{% endblock %}</div>
+      </div>
+      <div class="topbar-right">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </div>
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

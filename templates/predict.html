@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Run Prediction{% endblock %}
+{% block topbar_title %}Run Attrition Prediction{% endblock %}
+{% block topbar_sub %}XGBoost classifier · IBM HR Analytics dataset features{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:3fr 2fr;gap:18px;align-items:start;">
+
+  <!-- ── FORM ── -->
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('predict') }}" id="pred-form">
+
+        <!-- Employee ID (optional label) -->
+        <div style="margin-bottom:16px;">
+          <div class="form-section-title">Employee Reference</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Employee ID (optional)</label>
+              <input class="form-control" type="text" name="employee_id"
+                placeholder="e.g. EMP-1042"
+                value="{{ form_data.get('employee_id','') }}">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <select class="form-control" name="Gender" required>
+                <option value="">Select…</option>
+                {% for v in ['Male','Female'] %}
+                <option value="{{ v }}" {% if form_data.get('Gender')==v %}selected{% endif %}>{{ v }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal -->
+        <div class="form-section-title">Personal Info</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Age</label>
+            <input class="form-control" type="number" name="Age" min="18" max="65"
+              value="{{ form_data.get('Age','35') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Marital Status</label>
+            <select class="form-control" name="MaritalStatus" required>
+              {% for v in ['Single','Married','Divorced'] %}
+              <option value="{{ v }}" {% if form_data.get('MaritalStatus')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Distance from Home (km)</label>
+            <input class="form-control" type="number" name="DistanceFromHome" min="1" max="100"
+              value="{{ form_data.get('DistanceFromHome','10') }}" required>
+          </div>
+        </div>
+
+        <!-- Education -->
+        <div class="form-section-title">Education</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Education (1=Below College … 5=Doctor)</label>
+            <select class="form-control" name="Education" required>
+              {% for v,l in [(1,'1 — Below College'),(2,'2 — College'),(3,'3 — Bachelor'),(4,'4 — Master'),(5,'5 — Doctor')] %}
+              <option value="{{ v }}" {% if form_data.get('Education')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Education Field</label>
+            <select class="form-control" name="EducationField" required>
+              {% for v in ['Human Resources','Life Sciences','Marketing','Medical','Other','Technical Degree'] %}
+              <option value="{{ v }}" {% if form_data.get('EducationField')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Job Info -->
+        <div class="form-section-title">Job Details</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Department</label>
+            <select class="form-control" name="Department" required>
+              {% for v in ['Human Resources','Research & Development','Sales'] %}
+              <option value="{{ v }}" {% if form_data.get('Department')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Job Role</label>
+            <select class="form-control" name="JobRole" required>
+              {% for v in ['Healthcare Representative','Human Resources','Laboratory Technician','Manager','Manufacturing Director','Research Director','Research Scientist','Sales Executive','Sales Representative'] %}
+              <option value="{{ v }}" {% if form_data.get('JobRole')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Job Level (1–5)</label>
+            <select class="form-control" name="JobLevel" required>
+              {% for v,l in [(1,'1 — Entry'),(2,'2 — Junior'),(3,'3 — Mid'),(4,'4 — Senior'),(5,'5 — Director')] %}
+              <option value="{{ v }}" {% if form_data.get('JobLevel')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Business Travel</label>
+            <select class="form-control" name="BusinessTravel" required>
+              {% for v in ['Non-Travel','Travel_Rarely','Travel_Frequently'] %}
+              <option value="{{ v }}" {% if form_data.get('BusinessTravel')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>OverTime</label>
+            <select class="form-control" name="OverTime" required>
+              {% for v in ['Yes','No'] %}
+              <option value="{{ v }}" {% if form_data.get('OverTime')==v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Compensation -->
+        <div class="form-section-title">Compensation</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Monthly Income ($)</label>
+            <input class="form-control" type="number" name="MonthlyIncome" min="1000" max="20000"
+              value="{{ form_data.get('MonthlyIncome','5000') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Daily Rate</label>
+            <input class="form-control" type="number" name="DailyRate" min="100" max="1500"
+              value="{{ form_data.get('DailyRate','800') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Hourly Rate</label>
+            <input class="form-control" type="number" name="HourlyRate" min="30" max="100"
+              value="{{ form_data.get('HourlyRate','65') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Monthly Rate</label>
+            <input class="form-control" type="number" name="MonthlyRate" min="2000" max="27000"
+              value="{{ form_data.get('MonthlyRate','14000') }}" required>
+          </div>
+          <div class="form-group">
+            <label>% Salary Hike</label>
+            <input class="form-control" type="number" name="PercentSalaryHike" min="11" max="25"
+              value="{{ form_data.get('PercentSalaryHike','15') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Stock Option Level (0–3)</label>
+            <select class="form-control" name="StockOptionLevel" required>
+              {% for v in [0,1,2,3] %}
+              <option value="{{ v }}" {% if form_data.get('StockOptionLevel')|int == v %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Satisfaction Scores -->
+        <div class="form-section-title">Satisfaction & Engagement</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Job Satisfaction (1–4)</label>
+            <select class="form-control" name="JobSatisfaction" required>
+              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
+              <option value="{{ v }}" {% if form_data.get('JobSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Environment Satisfaction (1–4)</label>
+            <select class="form-control" name="EnvironmentSatisfaction" required>
+              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
+              <option value="{{ v }}" {% if form_data.get('EnvironmentSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Relationship Satisfaction (1–4)</label>
+            <select class="form-control" name="RelationshipSatisfaction" required>
+              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
+              <option value="{{ v }}" {% if form_data.get('RelationshipSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Work-Life Balance (1–4)</label>
+            <select class="form-control" name="WorkLifeBalance" required>
+              {% for v,l in [(1,'1 — Bad'),(2,'2 — Good'),(3,'3 — Better'),(4,'4 — Best')] %}
+              <option value="{{ v }}" {% if form_data.get('WorkLifeBalance')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Job Involvement (1–4)</label>
+            <select class="form-control" name="JobInvolvement" required>
+              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
+              <option value="{{ v }}" {% if form_data.get('JobInvolvement')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Performance Rating (1–4)</label>
+            <select class="form-control" name="PerformanceRating" required>
+              {% for v,l in [(1,'1 — Low'),(2,'2 — Good'),(3,'3 — Excellent'),(4,'4 — Outstanding')] %}
+              <option value="{{ v }}" {% if form_data.get('PerformanceRating')|int == v %}selected{% endif %}>{{ l }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Experience -->
+        <div class="form-section-title">Work Experience</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Total Working Years</label>
+            <input class="form-control" type="number" name="TotalWorkingYears" min="0" max="40"
+              value="{{ form_data.get('TotalWorkingYears','10') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Years at Company</label>
+            <input class="form-control" type="number" name="YearsAtCompany" min="0" max="40"
+              value="{{ form_data.get('YearsAtCompany','5') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Years in Current Role</label>
+            <input class="form-control" type="number" name="YearsInCurrentRole" min="0" max="18"
+              value="{{ form_data.get('YearsInCurrentRole','3') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Years Since Last Promotion</label>
+            <input class="form-control" type="number" name="YearsSinceLastPromotion" min="0" max="15"
+              value="{{ form_data.get('YearsSinceLastPromotion','2') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Years with Curr. Manager</label>
+            <input class="form-control" type="number" name="YearsWithCurrManager" min="0" max="17"
+              value="{{ form_data.get('YearsWithCurrManager','3') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Num. Companies Worked</label>
+            <input class="form-control" type="number" name="NumCompaniesWorked" min="0" max="9"
+              value="{{ form_data.get('NumCompaniesWorked','2') }}" required>
+          </div>
+          <div class="form-group">
+            <label>Training Times Last Year</label>
+            <input class="form-control" type="number" name="TrainingTimesLastYear" min="0" max="6"
+              value="{{ form_data.get('TrainingTimesLastYear','3') }}" required>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submit-btn">
+          Run Attrition Prediction →
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── RESULT PANEL ── -->
+  <div>
+    {% if prediction %}
+    {% set pct = probability %}
+    {% set clr = '#f55b5b' if risk_level=='High' else ('#f5a623' if risk_level=='Medium' else '#3de5a0') %}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-body" style="text-align:center;padding:28px 22px;">
+        <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:18px;">
+          Attrition Risk Score
+        </div>
+        <div style="width:120px;height:120px;border-radius:50%;border:8px solid {{ clr }}33;background:{{ clr }}0d;
+                    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+          <div>
+            <div style="font-size:30px;font-weight:300;font-family:var(--serif);color:{{ clr }}">{{ pct }}%</div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:{{ clr }};text-transform:uppercase;letter-spacing:1px;">
+          {{ risk_level }} Risk
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-top:10px;">{{ prediction }}</div>
+      </div>
+    </div>
+
+    <!-- Key factors (contextual guidance) -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-body">
+        <div class="card-title" style="margin-bottom:14px;">Key Drivers</div>
+        {% set overtime = form_data.get('OverTime','No') %}
+        {% set sat = form_data.get('JobSatisfaction','3')|int %}
+        {% set wlb = form_data.get('WorkLifeBalance','3')|int %}
+        {% set promo = form_data.get('YearsSinceLastPromotion','2')|int %}
+        {% set dist = form_data.get('DistanceFromHome','10')|int %}
+
+        {% for factor, impact, flag in [
+          ('OverTime: ' ~ overtime,       85 if overtime=='Yes' else 20,  overtime=='Yes'),
+          ('Job Satisfaction: ' ~ sat,    100-sat*20,                      sat <= 2),
+          ('Work-Life Balance: ' ~ wlb,   100-wlb*18,                      wlb <= 2),
+          ('Yrs Since Promotion: ' ~ promo, [promo*12,90]|min,             promo >= 3),
+          ('Distance from Home: ' ~ dist ~ 'km', [dist*3,85]|min,         dist > 15),
+        ] %}
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-size:11.5px;color:var(--text2);width:180px;flex-shrink:0;">{{ factor }}</div>
+          <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
+            <div style="width:{{ impact }}%;height:100%;border-radius:3px;
+                        background:{% if flag %}var(--red){% else %}var(--green){% endif %};
+                        transition:width 0.6s;"></div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);font-family:var(--mono);width:30px;text-align:right;">{{ impact }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="card-body" style="text-align:center;padding:48px 22px;">
+        <div style="font-size:36px;margin-bottom:12px;opacity:0.3;">⬡</div>
+        <div style="font-size:13px;color:var(--text3);">Fill in the form and click<br><strong style="color:var(--accent2);">Run Attrition Prediction</strong></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Tips card -->
+    <div class="card" style="margin-top:14px;">
+      <div class="card-body">
+        <div class="card-title" style="margin-bottom:12px;">Quick Tips</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.8;">
+          <div>▸ <strong style="color:var(--text2);">OverTime = Yes</strong> is the strongest attrition signal in this dataset.</div>
+          <div>▸ <strong style="color:var(--text2);">Low Job Satisfaction (1–2)</strong> significantly raises risk.</div>
+          <div>▸ <strong style="color:var(--text2);">RoleStability</strong> = YearsInCurrentRole / (YearsAtCompany+1) is a derived feature.</div>
+          <div>▸ <strong style="color:var(--text2);">Long commutes (&gt;10 km)</strong> are flagged as LongCommute=1 internally.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('pred-form').addEventListener('submit', function() {
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Analyzing…';
+  btn.disabled = true;
+});
+</script>
+{% endblock %}

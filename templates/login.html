@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttritionIQ — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0e1a; --bg2: #111527; --bg3: #181d35;
+  --border2: rgba(100,120,255,0.20);
+  --accent: #5b6ef5; --accent2: #7c8fff; --accent3: #a0aaff;
+  --text: #e8ecff; --text2: #9aa3cc; --text3: #5c6490;
+  --red: #f55b5b;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.bg-grid {
+  position: fixed; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(91,110,245,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91,110,245,0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.bg-glow {
+  position: fixed; pointer-events: none;
+  width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(91,110,245,0.15) 0%, transparent 65%);
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+.card {
+  position: relative; z-index: 1;
+  width: 420px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 44px 38px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 30px;
+}
+.logo {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-weight: 700; font-size: 16px; color: #fff;
+}
+.brand-name { font-family: 'DM Serif Display', serif; font-size: 20px; }
+.brand-name span { color: var(--accent2); }
+h1 { font-size: 26px; font-weight: 600; margin-bottom: 5px; }
+.sub { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 10.5px; font-weight: 600;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px;
+  margin-bottom: 6px;
+}
+.field input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 9px; padding: 11px 14px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px; outline: none; transition: border-color 0.2s;
+}
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--text3); }
+.alert-error {
+  background: rgba(245,91,91,0.11); border: 1px solid rgba(245,91,91,0.25);
+  border-radius: 8px; padding: 10px 14px;
+  color: #f88; font-size: 13px; margin-bottom: 14px;
+}
+.btn {
+  width: 100%; padding: 12px; border-radius: 9px;
+  background: var(--accent); border: none; color: #fff;
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background 0.2s; margin-top: 4px;
+}
+.btn:hover { background: var(--accent2); }
+.hint { margin-top: 18px; text-align: center; font-size: 11.5px; color: var(--text3); }
+.hint code { color: var(--accent3); font-family: 'JetBrains Mono', monospace; }
+.accounts {
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px solid rgba(100,120,255,0.12);
+}
+.accounts-title { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; }
+.acc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0; font-size: 12px; color: var(--text2);
+  border-bottom: 1px solid rgba(100,120,255,0.06);
+  cursor: pointer; transition: color 0.15s;
+}
+.acc-row:last-child { border-bottom: none; }
+.acc-row:hover { color: var(--accent3); }
+.acc-badge {
+  font-size: 10px; background: rgba(91,110,245,0.12);
+  color: var(--accent2); padding: 1px 8px; border-radius: 20px;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="card">
+  <div class="brand">
+    <div class="logo">A</div>
+    <div class="brand-name">Attrition<span>IQ</span></div>
+  </div>
+  <h1>Welcome back</h1>
+  <p class="sub">Sign in to your HR intelligence platform</p>
+
+  {% if error %}
+  <div class="alert-error">⚠ {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('login') }}">
+    <div class="field">
+      <label>Email address</label>
+      <input type="email" name="email" placeholder="hr@company.com" value="hr@company.com" required>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" value="password" required>
+    </div>
+    <button type="submit" class="btn">Sign In →</button>
+  </form>
+
+  <div class="accounts">
+    <div class="accounts-title">Demo Accounts (password: <code style="color:var(--accent3);font-size:10px">password</code>)</div>
+    <div class="acc-row" onclick="fillLogin('hr@company.com')">
+      <span>hr@company.com</span>
+      <span class="acc-badge">HR Manager</span>
+    </div>
+    <div class="acc-row" onclick="fillLogin('analyst@company.com')">
+      <span>analyst@company.com</span>
+      <span class="acc-badge">Analyst</span>
+    </div>
+    <div class="acc-row" onclick="fillLogin('admin@company.com')">
+      <span>admin@company.com</span>
+      <span class="acc-badge">Admin</span>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillLogin(email) {
+  document.querySelector('input[name="email"]').value = email;
+  document.querySelector('input[name="password"]').value = 'password';
+}
+</script>
+</body>
+</html>

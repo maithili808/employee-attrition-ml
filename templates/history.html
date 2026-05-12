@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History{% endblock %}
+{% block topbar_title %}Prediction History{% endblock %}
+{% block topbar_sub %}{{ total }} total predictions recorded in this session{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('predict') }}" class="pill primary">+ New Prediction</a>
+{% endblock %}
+
+{% set total_preds = total %}
+
+{% block content %}
+
+<!-- Summary chips -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+  {% for label, val, f, clr in [
+    ('All','all','all','var(--accent2)'),
+    ('High Risk','high','high','#f55b5b'),
+    ('Medium Risk','medium','medium','#f5a623'),
+    ('Low Risk','low','low','#3de5a0')
+  ] %}
+  <a href="{{ url_for('history') }}?risk={{ f }}"
+     style="padding:6px 15px;border-radius:20px;font-size:12px;text-decoration:none;transition:all 0.15s;
+            {% if risk_filter == f %}
+            background:{{ clr }}22;border:1px solid {{ clr }}55;color:{{ clr }};
+            {% else %}
+            background:transparent;border:1px solid var(--border2);color:var(--text2);
+            {% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Charts row (only if there's data) -->
+{% if history %}
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;">
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head"><div class="card-title">Risk Breakdown</div></div>
+      <div style="position:relative;height:150px;">
+        <canvas id="hRisk" role="img" aria-label="Risk breakdown donut"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head"><div class="card-title">Leave vs Stay</div></div>
+      <div style="position:relative;height:150px;">
+        <canvas id="hVerdict" role="img" aria-label="Leave vs stay donut"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head"><div class="card-title">OT vs Non-OT</div></div>
+      <div style="position:relative;height:150px;">
+        <canvas id="hOt" role="img" aria-label="Overtime vs non-overtime donut"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    <div style="padding:16px 20px 12px;">
+      <div class="card-title">
+        {% if risk_filter != 'all' %}{{ risk_filter | capitalize }} Risk Predictions{% else %}All Predictions{% endif %}
+        <span style="margin-left:8px;font-size:11px;font-weight:400;color:var(--text3);">({{ history|length }} records)</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      {% if history %}
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Employee ID</th>
+            <th>Department</th>
+            <th>Job Role</th>
+            <th>Probability</th>
+            <th>Risk</th>
+            <th>Verdict</th>
+            <th>OT</th>
+            <th>Satisfaction</th>
+            <th>Run By</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in history %}
+          <tr>
+            <td class="td-mono" style="color:var(--text3);">{{ loop.index }}</td>
+            <td class="td-mono">{{ p.employee_id or '—' }}</td>
+            <td class="td-main">{{ p.department }}</td>
+            <td style="font-size:12px;">{{ p.job_role }}</td>
+            <td>
+              <span class="td-mono">{{ p.probability }}%</span>
+              <div style="width:60px;height:3px;background:var(--bg3);border-radius:2px;margin-top:3px;overflow:hidden;">
+                <div style="width:{{ p.probability }}%;height:100%;border-radius:2px;
+                            background:{% if p.risk=='High' %}var(--red){% elif p.risk=='Medium' %}var(--amber){% else %}var(--green){% endif %};"></div>
+              </div>
+            </td>
+            <td>
+              <span class="chip chip-{{ p.risk | lower }}">
+                <span class="chip-dot"></span>{{ p.risk }}
+              </span>
+            </td>
+            <td>
+              {% if 'Yes' in p.prediction %}
+              <span class="chip chip-yes">Leave</span>
+              {% else %}
+              <span class="chip chip-no">Stay</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px;">
+              {% if p.overtime == 'Yes' %}
+              <span style="color:var(--red);font-weight:600;">Yes</span>
+              {% else %}
+              <span style="color:var(--text3);">No</span>
+              {% endif %}
+            </td>
+            <td class="td-mono" style="font-size:11px;">{{ p.satisfaction }}/4</td>
+            <td style="font-size:11.5px;color:var(--text3);">{{ p.run_by }}</td>
+            <td class="td-mono" style="font-size:10.5px;white-space:nowrap;">{{ p.timestamp }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">◷</div>
+        <div class="empty-text">
+          {% if risk_filter != 'all' %}
+          No {{ risk_filter }} risk predictions yet.
+          {% else %}
+          No predictions recorded. <a href="{{ url_for('predict') }}" style="color:var(--accent2);">Run your first →</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if history %}
+<script>
+const gridColor = 'rgba(91,110,255,0.07)';
+Chart.defaults.color = '#5c6490';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+// Collect stats from history data
+const items = {{ history | tojson }};
+let high=0,med=0,low=0,leave=0,stay=0,ot=0,notOt=0;
+items.forEach(p => {
+  if (p.risk==='High') high++;
+  else if (p.risk==='Medium') med++;
+  else low++;
+  if (p.prediction.includes('Yes')) leave++; else stay++;
+  if (p.overtime==='Yes') ot++; else notOt++;
+});
+
+function makeDough(id, labels, data, colors) {
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: {
+      labels, datasets: [{data, backgroundColor: colors, borderWidth: 0, borderRadius: 3}]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {legend: {position:'bottom', labels:{padding:10,boxWidth:8,usePointStyle:true}}}
+    }
+  });
+}
+
+makeDough('hRisk',
+  ['High','Medium','Low'], [high,med,low],
+  ['#f55b5b','#f5a623','#3de5a0']
+);
+makeDough('hVerdict',
+  ['Leave','Stay'], [leave,stay],
+  ['#f55b5b','#3de5a0']
+);
+makeDough('hOt',
+  ['OverTime Yes','No'], [ot,notOt],
+  ['rgba(245,91,91,0.7)','rgba(91,110,245,0.5)']
+);
+</script>
+{% endif %}
+{% endblock %}

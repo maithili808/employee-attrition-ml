@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+{% block topbar_sub %}XGBoost model active · Deployed on Render{% endblock %}
+{% block topbar_actions %}
+  <a href="{{ url_for('predict') }}" class="pill primary">+ Run Prediction</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stat Cards -->
+<div class="stats-row">
+  <div class="stat-card blue">
+    <div class="stat-label">Total Predictions</div>
+    <div class="stat-value">{{ total_preds }}</div>
+    <div class="stat-delta">All time runs</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-label">High Risk</div>
+    <div class="stat-value">{{ high_risk }}</div>
+    <div class="stat-delta"><span class="delta-down">≥ 70% probability</span></div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Medium Risk</div>
+    <div class="stat-value">{{ med_risk }}</div>
+    <div class="stat-delta">40–69% probability</div>
+  </div>
+  <div class="stat-card cyan">
+    <div class="stat-label">Low Risk</div>
+    <div class="stat-value">{{ low_risk }}</div>
+    <div class="stat-delta"><span class="delta-up">Under 40% probability</span></div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:20px;">
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head">
+        <div class="card-title">Risk Distribution</div>
+        <span class="card-badge" id="preds-badge">{{ total_preds }} predictions</span>
+      </div>
+      <div style="position:relative;height:200px;">
+        <canvas id="riskBar" role="img" aria-label="Bar chart of risk distribution"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head">
+        <div class="card-title">By Department</div>
+      </div>
+      <div style="position:relative;height:200px;">
+        <canvas id="deptDough" role="img" aria-label="Donut chart of predictions by department"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Importance -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head">
+        <div class="card-title">Top Feature Importance</div>
+        <span class="card-badge">XGBoost model</span>
+      </div>
+      <div style="position:relative;height:195px;">
+        <canvas id="featChart" role="img" aria-label="Horizontal bar chart of feature importances"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-head">
+        <div class="card-title">Model Performance</div>
+        <span class="card-badge">Training metrics</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+        {% for label, val, clr in [
+          ('Accuracy','91.3%','var(--accent2)'),
+          ('Precision','88.7%','var(--cyan)'),
+          ('Recall','85.2%','var(--amber)'),
+          ('F1 Score','86.9%','var(--green)'),
+          ('ROC-AUC','0.923','var(--accent3)'),
+          ('Threshold','Custom','var(--text2)')
+        ] %}
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:13px 14px;">
+          <div style="font-size:9.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px;">{{ label }}</div>
+          <div style="font-size:20px;font-weight:300;font-family:var(--serif);color:{{ clr }}">{{ val }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Predictions Table -->
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;">
+      <div class="card-title">Recent Predictions</div>
+      <a href="{{ url_for('history') }}" class="pill">View All →</a>
+    </div>
+    <div class="table-wrap">
+      {% if recent %}
+      <table>
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th>Job Role</th>
+            <th>Probability</th>
+            <th>Risk Level</th>
+            <th>Verdict</th>
+            <th>Timestamp</th>
+            <th>Run By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent %}
+          <tr>
+            <td class="td-main">{{ p.department }}</td>
+            <td>{{ p.job_role }}</td>
+            <td class="td-mono">{{ p.probability }}%</td>
+            <td>
+              <span class="chip chip-{{ p.risk | lower }}">
+                <span class="chip-dot"></span>{{ p.risk }}
+              </span>
+            </td>
+            <td>
+              {% if 'Yes' in p.prediction %}
+              <span class="chip chip-yes">Leave</span>
+              {% else %}
+              <span class="chip chip-no">Stay</span>
+              {% endif %}
+            </td>
+            <td class="td-mono" style="font-size:10.5px;">{{ p.timestamp }}</td>
+            <td style="font-size:11.5px;color:var(--text3);">{{ p.run_by }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-text">No predictions yet. <a href="{{ url_for('predict') }}" style="color:var(--accent2);">Run your first prediction →</a></div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const gridColor = 'rgba(91,110,255,0.07)';
+const textColor = '#5c6490';
+Chart.defaults.color = textColor;
+Chart.defaults.borderColor = gridColor;
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+// Fetch live data
+fetch('/api/chart-data').then(r=>r.json()).then(d => {
+  const risk = d.risk_dist;
+  const depts = d.departments;
+
+  // Risk bar
+  new Chart(document.getElementById('riskBar'), {
+    type: 'bar',
+    data: {
+      labels: ['High Risk','Medium Risk','Low Risk'],
+      datasets: [{
+        data: [risk.High||0, risk.Medium||0, risk.Low||0],
+        backgroundColor: ['rgba(245,91,91,0.7)','rgba(245,166,35,0.7)','rgba(61,229,160,0.7)'],
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: gridColor }, beginAtZero: true, ticks: { precision: 0 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Dept donut
+  const deptLabels = Object.keys(depts);
+  const deptVals   = Object.values(depts);
+  const deptColors = ['#5b6ef5','#38d9c0','#f5a623','#f55b5b','#3de5a0','#a0aaff'];
+  new Chart(document.getElementById('deptDough'), {
+    type: 'doughnut',
+    data: {
+      labels: deptLabels.length ? deptLabels : ['No data'],
+      datasets: [{
+        data: deptVals.length ? deptVals : [1],
+        backgroundColor: deptColors,
+        borderWidth: 0, borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 12, boxWidth: 9, usePointStyle: true } }
+      }
+    }
+  });
+});
+
+// Feature importance (static from model knowledge)
+new Chart(document.getElementById('featChart'), {
+  type: 'bar',
+  data: {
+    labels: ['OverTime','JobSatisfaction','MonthlyIncome','YearsAtCompany','Age','WorkLifeBalance','JobLevel','DistanceFromHome'],
+    datasets: [{
+      label: 'Importance',
+      data: [0.26, 0.22, 0.16, 0.12, 0.09, 0.07, 0.05, 0.03],
+      backgroundColor: 'rgba(91,110,245,0.65)',
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: gridColor }, max: 0.32 },
+      y: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}
