@@ -2,30 +2,136 @@
 
 {% block title %}Run Prediction{% endblock %}
 {% block topbar_title %}Run Attrition Prediction{% endblock %}
-{% block topbar_sub %}XGBoost classifier · IBM HR Analytics dataset features{% endblock %}
+{% block topbar_sub %}XGBoost + SHAP explainability · Real-time feature attribution{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── SHAP panel styles ── */
+.shap-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.shap-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.shap-title { font-size: 13px; font-weight: 600; }
+.shap-legend {
+  display: flex; gap: 14px; font-size: 11px; color: var(--text3);
+}
+.shap-legend-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}
+
+/* waterfall rows */
+.shap-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px;
+  border-bottom: 1px solid rgba(100,120,255,0.05);
+  transition: background 0.12s;
+}
+.shap-row:last-child { border-bottom: none; }
+.shap-row:hover { background: var(--bg3); }
+.shap-rank {
+  font-size: 10px; font-family: var(--mono); color: var(--text3);
+  width: 18px; flex-shrink: 0; text-align: center;
+}
+.shap-feat {
+  font-size: 12px; color: var(--text); width: 185px; flex-shrink: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.shap-bar-wrap {
+  flex: 1; height: 18px; background: var(--bg3);
+  border-radius: 3px; overflow: hidden; position: relative;
+}
+.shap-bar {
+  height: 100%; border-radius: 3px;
+  transition: width 0.7s cubic-bezier(.16,1,.3,1);
+}
+.shap-bar.risk { background: rgba(245,91,91,0.75); }
+.shap-bar.safe { background: rgba(61,229,160,0.65); }
+.shap-val {
+  font-size: 10.5px; font-family: var(--mono);
+  width: 52px; text-align: right; flex-shrink: 0;
+}
+.shap-val.risk { color: #f88; }
+.shap-val.safe { color: #3de5a0; }
+.shap-dir {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; width: 30px; flex-shrink: 0;
+}
+.shap-dir.risk { color: rgba(248,136,136,0.7); }
+.shap-dir.safe { color: rgba(61,229,160,0.7); }
+
+/* summary strip */
+.shap-summary {
+  display: flex; gap: 0; border-radius: 8px; overflow: hidden;
+  height: 8px; margin: 14px 20px 4px;
+}
+.shap-sum-seg { transition: flex 0.6s; }
+
+/* insight cards */
+.insight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
+.insight-card {
+  border-radius: 9px; padding: 12px 14px;
+}
+.insight-card.bad  { background: rgba(245,91,91,0.08);  border: 1px solid rgba(245,91,91,0.18); }
+.insight-card.good { background: rgba(61,229,160,0.07); border: 1px solid rgba(61,229,160,0.18); }
+.insight-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 5px; }
+.insight-card.bad  .insight-label { color: rgba(248,136,136,0.8); }
+.insight-card.good .insight-label { color: rgba(61,229,160,0.8); }
+.insight-list { font-size: 11.5px; color: var(--text2); line-height: 1.7; }
+
+/* gauge */
+.gauge-wrap {
+  text-align: center; padding: 26px 22px 18px;
+}
+.gauge-ring {
+  width: 120px; height: 120px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; position: relative;
+}
+.gauge-pct { font-size: 28px; font-weight: 300; font-family: var(--serif); }
+.gauge-verdict { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+/* base-value annotation */
+.shap-base {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 20px 10px;
+  font-size: 11px; color: var(--text3);
+  border-top: 1px solid var(--border);
+}
+.shap-base-line {
+  flex: 1; height: 1px;
+  background: repeating-linear-gradient(90deg, var(--text3) 0, var(--text3) 4px, transparent 4px, transparent 8px);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="display:grid;grid-template-columns:3fr 2fr;gap:18px;align-items:start;">
+<div style="display:grid;grid-template-columns:5fr 4fr;gap:18px;align-items:start;">
 
-  <!-- ── FORM ── -->
+  <!-- ══ LEFT: FORM ══ -->
   <div class="card">
     <div class="card-body">
       <form method="POST" action="{{ url_for('predict') }}" id="pred-form">
 
-        <!-- Employee ID (optional label) -->
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:14px;">
           <div class="form-section-title">Employee Reference</div>
           <div class="form-grid">
             <div class="form-group">
               <label>Employee ID (optional)</label>
               <input class="form-control" type="text" name="employee_id"
-                placeholder="e.g. EMP-1042"
-                value="{{ form_data.get('employee_id','') }}">
+                placeholder="e.g. EMP-1042" value="{{ form_data.get('employee_id','') }}">
             </div>
             <div class="form-group">
               <label>Gender</label>
               <select class="form-control" name="Gender" required>
-                <option value="">Select…</option>
                 {% for v in ['Male','Female'] %}
                 <option value="{{ v }}" {% if form_data.get('Gender')==v %}selected{% endif %}>{{ v }}</option>
                 {% endfor %}
@@ -34,13 +140,11 @@
           </div>
         </div>
 
-        <!-- Personal -->
-        <div class="form-section-title">Personal Info</div>
+        <div class="form-section-title">Personal</div>
         <div class="form-grid-3">
           <div class="form-group">
             <label>Age</label>
-            <input class="form-control" type="number" name="Age" min="18" max="65"
-              value="{{ form_data.get('Age','35') }}" required>
+            <input class="form-control" type="number" name="Age" min="18" max="65" value="{{ form_data.get('Age','35') }}" required>
           </div>
           <div class="form-group">
             <label>Marital Status</label>
@@ -52,19 +156,17 @@
           </div>
           <div class="form-group">
             <label>Distance from Home (km)</label>
-            <input class="form-control" type="number" name="DistanceFromHome" min="1" max="100"
-              value="{{ form_data.get('DistanceFromHome','10') }}" required>
+            <input class="form-control" type="number" name="DistanceFromHome" min="1" max="100" value="{{ form_data.get('DistanceFromHome','10') }}" required>
           </div>
         </div>
 
-        <!-- Education -->
         <div class="form-section-title">Education</div>
         <div class="form-grid">
           <div class="form-group">
-            <label>Education (1=Below College … 5=Doctor)</label>
+            <label>Education Level</label>
             <select class="form-control" name="Education" required>
               {% for v,l in [(1,'1 — Below College'),(2,'2 — College'),(3,'3 — Bachelor'),(4,'4 — Master'),(5,'5 — Doctor')] %}
-              <option value="{{ v }}" {% if form_data.get('Education')|int == v %}selected{% endif %}>{{ l }}</option>
+              <option value="{{ v }}" {% if form_data.get('Education',3)|int == v %}selected{% endif %}>{{ l }}</option>
               {% endfor %}
             </select>
           </div>
@@ -78,7 +180,6 @@
           </div>
         </div>
 
-        <!-- Job Info -->
         <div class="form-section-title">Job Details</div>
         <div class="form-grid-3">
           <div class="form-group">
@@ -98,10 +199,10 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Job Level (1–5)</label>
+            <label>Job Level</label>
             <select class="form-control" name="JobLevel" required>
               {% for v,l in [(1,'1 — Entry'),(2,'2 — Junior'),(3,'3 — Mid'),(4,'4 — Senior'),(5,'5 — Director')] %}
-              <option value="{{ v }}" {% if form_data.get('JobLevel')|int == v %}selected{% endif %}>{{ l }}</option>
+              <option value="{{ v }}" {% if form_data.get('JobLevel',3)|int == v %}selected{% endif %}>{{ l }}</option>
               {% endfor %}
             </select>
           </div>
@@ -119,234 +220,233 @@
             <label>OverTime</label>
             <select class="form-control" name="OverTime" required>
               {% for v in ['Yes','No'] %}
-              <option value="{{ v }}" {% if form_data.get('OverTime')==v %}selected{% endif %}>{{ v }}</option>
+              <option value="{{ v }}" {% if form_data.get('OverTime','No')==v %}selected{% endif %}>{{ v }}</option>
               {% endfor %}
             </select>
           </div>
         </div>
 
-        <!-- Compensation -->
         <div class="form-section-title">Compensation</div>
         <div class="form-grid-3">
           <div class="form-group">
             <label>Monthly Income ($)</label>
-            <input class="form-control" type="number" name="MonthlyIncome" min="1000" max="20000"
-              value="{{ form_data.get('MonthlyIncome','5000') }}" required>
+            <input class="form-control" type="number" name="MonthlyIncome" min="1000" max="20000" value="{{ form_data.get('MonthlyIncome','5000') }}" required>
           </div>
           <div class="form-group">
             <label>Daily Rate</label>
-            <input class="form-control" type="number" name="DailyRate" min="100" max="1500"
-              value="{{ form_data.get('DailyRate','800') }}" required>
+            <input class="form-control" type="number" name="DailyRate" min="100" max="1500" value="{{ form_data.get('DailyRate','800') }}" required>
           </div>
           <div class="form-group">
             <label>Hourly Rate</label>
-            <input class="form-control" type="number" name="HourlyRate" min="30" max="100"
-              value="{{ form_data.get('HourlyRate','65') }}" required>
+            <input class="form-control" type="number" name="HourlyRate" min="30" max="100" value="{{ form_data.get('HourlyRate','65') }}" required>
           </div>
           <div class="form-group">
             <label>Monthly Rate</label>
-            <input class="form-control" type="number" name="MonthlyRate" min="2000" max="27000"
-              value="{{ form_data.get('MonthlyRate','14000') }}" required>
+            <input class="form-control" type="number" name="MonthlyRate" min="2000" max="27000" value="{{ form_data.get('MonthlyRate','14000') }}" required>
           </div>
           <div class="form-group">
             <label>% Salary Hike</label>
-            <input class="form-control" type="number" name="PercentSalaryHike" min="11" max="25"
-              value="{{ form_data.get('PercentSalaryHike','15') }}" required>
+            <input class="form-control" type="number" name="PercentSalaryHike" min="11" max="25" value="{{ form_data.get('PercentSalaryHike','15') }}" required>
           </div>
           <div class="form-group">
-            <label>Stock Option Level (0–3)</label>
+            <label>Stock Option Level</label>
             <select class="form-control" name="StockOptionLevel" required>
               {% for v in [0,1,2,3] %}
-              <option value="{{ v }}" {% if form_data.get('StockOptionLevel')|int == v %}selected{% endif %}>{{ v }}</option>
+              <option value="{{ v }}" {% if form_data.get('StockOptionLevel',0)|int == v %}selected{% endif %}>{{ v }}</option>
               {% endfor %}
             </select>
           </div>
         </div>
 
-        <!-- Satisfaction Scores -->
         <div class="form-section-title">Satisfaction & Engagement</div>
         <div class="form-grid">
+          {% for name, label in [
+            ('JobSatisfaction','Job Satisfaction (1–4)'),
+            ('EnvironmentSatisfaction','Environment Satisfaction (1–4)'),
+            ('RelationshipSatisfaction','Relationship Satisfaction (1–4)'),
+            ('WorkLifeBalance','Work-Life Balance (1–4)'),
+            ('JobInvolvement','Job Involvement (1–4)'),
+            ('PerformanceRating','Performance Rating (1–4)')
+          ] %}
           <div class="form-group">
-            <label>Job Satisfaction (1–4)</label>
-            <select class="form-control" name="JobSatisfaction" required>
-              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
-              <option value="{{ v }}" {% if form_data.get('JobSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
+            <label>{{ label }}</label>
+            <select class="form-control" name="{{ name }}" required>
+              {% for v in [1,2,3,4] %}
+              <option value="{{ v }}" {% if form_data.get(name,3)|int == v %}selected{% endif %}>{{ v }}</option>
               {% endfor %}
             </select>
           </div>
-          <div class="form-group">
-            <label>Environment Satisfaction (1–4)</label>
-            <select class="form-control" name="EnvironmentSatisfaction" required>
-              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
-              <option value="{{ v }}" {% if form_data.get('EnvironmentSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Relationship Satisfaction (1–4)</label>
-            <select class="form-control" name="RelationshipSatisfaction" required>
-              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
-              <option value="{{ v }}" {% if form_data.get('RelationshipSatisfaction')|int == v %}selected{% endif %}>{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Work-Life Balance (1–4)</label>
-            <select class="form-control" name="WorkLifeBalance" required>
-              {% for v,l in [(1,'1 — Bad'),(2,'2 — Good'),(3,'3 — Better'),(4,'4 — Best')] %}
-              <option value="{{ v }}" {% if form_data.get('WorkLifeBalance')|int == v %}selected{% endif %}>{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Job Involvement (1–4)</label>
-            <select class="form-control" name="JobInvolvement" required>
-              {% for v,l in [(1,'1 — Low'),(2,'2 — Medium'),(3,'3 — High'),(4,'4 — Very High')] %}
-              <option value="{{ v }}" {% if form_data.get('JobInvolvement')|int == v %}selected{% endif %}>{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Performance Rating (1–4)</label>
-            <select class="form-control" name="PerformanceRating" required>
-              {% for v,l in [(1,'1 — Low'),(2,'2 — Good'),(3,'3 — Excellent'),(4,'4 — Outstanding')] %}
-              <option value="{{ v }}" {% if form_data.get('PerformanceRating')|int == v %}selected{% endif %}>{{ l }}</option>
-              {% endfor %}
-            </select>
-          </div>
+          {% endfor %}
         </div>
 
-        <!-- Experience -->
         <div class="form-section-title">Work Experience</div>
         <div class="form-grid-3">
+          {% for name, label, default in [
+            ('TotalWorkingYears','Total Working Years','10'),
+            ('YearsAtCompany','Years at Company','5'),
+            ('YearsInCurrentRole','Years in Current Role','3'),
+            ('YearsSinceLastPromotion','Yrs Since Promotion','2'),
+            ('YearsWithCurrManager','Yrs with Curr Manager','3'),
+            ('NumCompaniesWorked','Num Companies Worked','2'),
+            ('TrainingTimesLastYear','Training Times Last Year','3')
+          ] %}
           <div class="form-group">
-            <label>Total Working Years</label>
-            <input class="form-control" type="number" name="TotalWorkingYears" min="0" max="40"
-              value="{{ form_data.get('TotalWorkingYears','10') }}" required>
+            <label>{{ label }}</label>
+            <input class="form-control" type="number" name="{{ name }}"
+              min="0" max="40" value="{{ form_data.get(name, default) }}" required>
           </div>
-          <div class="form-group">
-            <label>Years at Company</label>
-            <input class="form-control" type="number" name="YearsAtCompany" min="0" max="40"
-              value="{{ form_data.get('YearsAtCompany','5') }}" required>
-          </div>
-          <div class="form-group">
-            <label>Years in Current Role</label>
-            <input class="form-control" type="number" name="YearsInCurrentRole" min="0" max="18"
-              value="{{ form_data.get('YearsInCurrentRole','3') }}" required>
-          </div>
-          <div class="form-group">
-            <label>Years Since Last Promotion</label>
-            <input class="form-control" type="number" name="YearsSinceLastPromotion" min="0" max="15"
-              value="{{ form_data.get('YearsSinceLastPromotion','2') }}" required>
-          </div>
-          <div class="form-group">
-            <label>Years with Curr. Manager</label>
-            <input class="form-control" type="number" name="YearsWithCurrManager" min="0" max="17"
-              value="{{ form_data.get('YearsWithCurrManager','3') }}" required>
-          </div>
-          <div class="form-group">
-            <label>Num. Companies Worked</label>
-            <input class="form-control" type="number" name="NumCompaniesWorked" min="0" max="9"
-              value="{{ form_data.get('NumCompaniesWorked','2') }}" required>
-          </div>
-          <div class="form-group">
-            <label>Training Times Last Year</label>
-            <input class="form-control" type="number" name="TrainingTimesLastYear" min="0" max="6"
-              value="{{ form_data.get('TrainingTimesLastYear','3') }}" required>
-          </div>
+          {% endfor %}
         </div>
 
         <button type="submit" class="submit-btn" id="submit-btn">
-          Run Attrition Prediction →
+          ⬡ Run Prediction + SHAP Explanation →
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ── RESULT PANEL ── -->
+  <!-- ══ RIGHT: RESULT + SHAP ══ -->
   <div>
+
     {% if prediction %}
-    {% set pct = probability %}
     {% set clr = '#f55b5b' if risk_level=='High' else ('#f5a623' if risk_level=='Medium' else '#3de5a0') %}
+    {% set risk_count = shap_data | selectattr('direction','eq','risk') | list | length %}
+    {% set safe_count = shap_data | selectattr('direction','eq','safe') | list | length %}
+
+    <!-- Gauge card -->
     <div class="card" style="margin-bottom:14px;">
-      <div class="card-body" style="text-align:center;padding:28px 22px;">
-        <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:18px;">
-          Attrition Risk Score
+      <div class="gauge-wrap">
+        <div style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;">
+          SHAP-Explained Attrition Risk
         </div>
-        <div style="width:120px;height:120px;border-radius:50%;border:8px solid {{ clr }}33;background:{{ clr }}0d;
-                    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <div class="gauge-ring" style="border:8px solid {{ clr }}30;background:{{ clr }}0d;">
           <div>
-            <div style="font-size:30px;font-weight:300;font-family:var(--serif);color:{{ clr }}">{{ pct }}%</div>
+            <div class="gauge-pct" style="color:{{ clr }}">{{ probability }}%</div>
           </div>
         </div>
-        <div style="font-size:12px;font-weight:700;color:{{ clr }};text-transform:uppercase;letter-spacing:1px;">
+        <div style="font-size:11.5px;font-weight:700;color:{{ clr }};text-transform:uppercase;letter-spacing:1px;">
           {{ risk_level }} Risk
         </div>
-        <div style="font-size:13px;color:var(--text2);margin-top:10px;">{{ prediction }}</div>
-      </div>
-    </div>
+        <div class="gauge-verdict">{{ prediction }}</div>
 
-    <!-- Key factors (contextual guidance) -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-body">
-        <div class="card-title" style="margin-bottom:14px;">Key Drivers</div>
-        {% set overtime = form_data.get('OverTime','No') %}
-        {% set sat = form_data.get('JobSatisfaction','3')|int %}
-        {% set wlb = form_data.get('WorkLifeBalance','3')|int %}
-        {% set promo = form_data.get('YearsSinceLastPromotion','2')|int %}
-        {% set dist = form_data.get('DistanceFromHome','10')|int %}
-
-        {% for factor, impact, flag in [
-          ('OverTime: ' ~ overtime,       85 if overtime=='Yes' else 20,  overtime=='Yes'),
-          ('Job Satisfaction: ' ~ sat,    100-sat*20,                      sat <= 2),
-          ('Work-Life Balance: ' ~ wlb,   100-wlb*18,                      wlb <= 2),
-          ('Yrs Since Promotion: ' ~ promo, [promo*12,90]|min,             promo >= 3),
-          ('Distance from Home: ' ~ dist ~ 'km', [dist*3,85]|min,         dist > 15),
-        ] %}
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-          <div style="font-size:11.5px;color:var(--text2);width:180px;flex-shrink:0;">{{ factor }}</div>
-          <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;">
-            <div style="width:{{ impact }}%;height:100%;border-radius:3px;
-                        background:{% if flag %}var(--red){% else %}var(--green){% endif %};
-                        transition:width 0.6s;"></div>
-          </div>
-          <div style="font-size:10.5px;color:var(--text3);font-family:var(--mono);width:30px;text-align:right;">{{ impact }}%</div>
+        <!-- risk/safe factor summary -->
+        <div style="display:flex;justify-content:center;gap:20px;margin-top:12px;font-size:11px;">
+          <span style="color:#f88;">▲ {{ risk_count }} risk factors</span>
+          <span style="color:#3de5a0;">▼ {{ safe_count }} protective factors</span>
         </div>
-        {% endfor %}
       </div>
     </div>
-    {% else %}
-    <div class="card">
-      <div class="card-body" style="text-align:center;padding:48px 22px;">
-        <div style="font-size:36px;margin-bottom:12px;opacity:0.3;">⬡</div>
-        <div style="font-size:13px;color:var(--text3);">Fill in the form and click<br><strong style="color:var(--accent2);">Run Attrition Prediction</strong></div>
+
+    <!-- SHAP waterfall panel -->
+    {% if shap_data %}
+    <div class="shap-panel">
+      <div class="shap-header">
+        <div class="shap-title">SHAP Feature Attribution</div>
+        <div class="shap-legend">
+          <span><span class="shap-legend-dot" style="background:#f55b5b;"></span>Increases risk</span>
+          <span><span class="shap-legend-dot" style="background:#3de5a0;"></span>Reduces risk</span>
+        </div>
+      </div>
+
+      <!-- Stacked bar summary -->
+      <div>
+        <div class="shap-summary">
+          {% for s in shap_data %}
+          <div class="shap-sum-seg"
+               style="flex:{{ s.abs_shap }};background:{% if s.direction=='risk' %}rgba(245,91,91,{% if loop.index==1 %}0.85{% else %}0.5{% endif %}){% else %}rgba(61,229,160,{% if loop.index==1 %}0.75{% else %}0.45{% endif %}){% endif %};"
+               title="{{ s.feature }}: {{ '+' if s.shap_value > 0 else '' }}{{ s.shap_value }}">
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:0 20px 10px;font-size:9.5px;color:var(--text3);">
+          <span>← protective</span><span>risk-driving →</span>
+        </div>
+      </div>
+
+      <!-- Row-by-row breakdown -->
+      {% for s in shap_data %}
+      <div class="shap-row">
+        <div class="shap-rank">{{ loop.index }}</div>
+        <div class="shap-feat" title="{{ s.feature }}">{{ s.feature }}</div>
+        <div class="shap-bar-wrap">
+          <div class="shap-bar {{ s.direction }}" style="width:{{ s.bar_pct }}%;"></div>
+        </div>
+        <div class="shap-val {{ s.direction }}">
+          {{ '+' if s.shap_value > 0 else '' }}{{ "%.3f"|format(s.shap_value) }}
+        </div>
+        <div class="shap-dir {{ s.direction }}">
+          {% if s.direction == 'risk' %}↑ risk{% else %}↓ safe{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Base value note -->
+      <div class="shap-base">
+        <div class="shap-base-line"></div>
+        <span>Model base rate ≈ 16% (population avg)</span>
+        <div class="shap-base-line"></div>
+      </div>
+
+      <!-- Insight summary cards -->
+      <div class="insight-grid">
+        <div class="insight-card bad">
+          <div class="insight-label">⚠ Top Risk Drivers</div>
+          <div class="insight-list">
+            {% for s in shap_data if s.direction == 'risk' %}{% if loop.index <= 3 %}
+            <div>{{ loop.index }}. {{ s.feature }}</div>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+        <div class="insight-card good">
+          <div class="insight-label">✓ Protective Factors</div>
+          <div class="insight-list">
+            {% for s in shap_data if s.direction == 'safe' %}{% if loop.index <= 3 %}
+            <div>{{ loop.index }}. {{ s.feature }}</div>
+            {% endif %}{% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- HR action tip -->
+      <div style="padding:12px 20px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);line-height:1.7;">
+        <strong style="color:var(--accent2);">HR Action:</strong>
+        Focus retention efforts on the top risk driver —
+        <strong style="color:var(--text2);">{{ shap_data[0].feature }}</strong>.
+        {% if safe_count > 0 %}
+        Leverage <strong style="color:var(--text2);">{{ (shap_data | selectattr('direction','eq','safe') | first).feature }}</strong> as a retention anchor.
+        {% endif %}
       </div>
     </div>
     {% endif %}
 
-    <!-- Tips card -->
-    <div class="card" style="margin-top:14px;">
-      <div class="card-body">
-        <div class="card-title" style="margin-bottom:12px;">Quick Tips</div>
-        <div style="font-size:12px;color:var(--text3);line-height:1.8;">
-          <div>▸ <strong style="color:var(--text2);">OverTime = Yes</strong> is the strongest attrition signal in this dataset.</div>
-          <div>▸ <strong style="color:var(--text2);">Low Job Satisfaction (1–2)</strong> significantly raises risk.</div>
-          <div>▸ <strong style="color:var(--text2);">RoleStability</strong> = YearsInCurrentRole / (YearsAtCompany+1) is a derived feature.</div>
-          <div>▸ <strong style="color:var(--text2);">Long commutes (&gt;10 km)</strong> are flagged as LongCommute=1 internally.</div>
+    {% else %}
+    <!-- Empty state -->
+    <div class="card">
+      <div style="text-align:center;padding:52px 22px;">
+        <div style="font-size:40px;margin-bottom:14px;opacity:0.25;">⬡</div>
+        <div style="font-size:13px;color:var(--text3);">Fill the form and click</div>
+        <div style="font-size:13px;color:var(--accent2);font-weight:600;margin-top:4px;">Run Prediction + SHAP Explanation</div>
+        <div style="margin-top:18px;text-align:left;background:var(--bg3);border-radius:10px;padding:14px 16px;font-size:11.5px;color:var(--text3);line-height:1.8;">
+          <div style="color:var(--text2);font-weight:600;margin-bottom:6px;">What SHAP shows you:</div>
+          <div>▸ <strong style="color:var(--text);">Which features</strong> pushed risk up or down</div>
+          <div>▸ <strong style="color:var(--text);">By how much</strong> each factor contributed</div>
+          <div>▸ <strong style="color:var(--text);">Risk vs protective</strong> factors ranked</div>
+          <div>▸ <strong style="color:var(--text);">HR action tip</strong> on what to address first</div>
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.getElementById('pred-form').addEventListener('submit', function() {
   const btn = document.getElementById('submit-btn');
-  btn.textContent = 'Analyzing…';
+  btn.textContent = 'Running SHAP analysis…';
   btn.disabled = true;
+  btn.style.opacity = '0.7';
 });
 </script>
 {% endblock %}
