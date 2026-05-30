@@ -185,7 +185,7 @@
           <div class="form-group">
             <label>Department</label>
             <select class="form-control" name="Department" required>
-              {% for v in ['Human Resources','Research & Development','Sales'] %}
+              {% for v in ['Customer Support','Finance','Human Resources','Information Technology','Legal','Marketing','Operations','Research & Development','Sales'] %}
               <option value="{{ v }}" {% if form_data.get('Department')==v %}selected{% endif %}>{{ v }}</option>
               {% endfor %}
             </select>
@@ -193,7 +193,7 @@
           <div class="form-group">
             <label>Job Role</label>
             <select class="form-control" name="JobRole" required>
-              {% for v in ['Healthcare Representative','Human Resources','Laboratory Technician','Manager','Manufacturing Director','Research Director','Research Scientist','Sales Executive','Sales Representative'] %}
+              {% for v in ['Accountant','Data Analyst','Finance Analyst','Healthcare Representative','Human Resources','HR Manager','IT Support','Laboratory Technician','Manager','Manufacturing Director','Operations Manager','Research Director','Research Scientist','Sales Executive','Sales Representative','Software Engineer','Supply Chain Analyst'] %}
               <option value="{{ v }}" {% if form_data.get('JobRole')==v %}selected{% endif %}>{{ v }}</option>
               {% endfor %}
             </select>
@@ -296,6 +296,32 @@
               min="0" max="40" value="{{ form_data.get(name, default) }}" required>
           </div>
           {% endfor %}
+        </div>
+
+        <div class="form-section-title">Employee Engagement</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Participation in Company Events</label>
+            <select class="form-control" name="ParticipationInCompanyEvents" required>
+              <option value="0" {% if form_data.get('ParticipationInCompanyEvents','1')|int == 0 %}selected{% endif %}>Never</option>
+              <option value="1" {% if form_data.get('ParticipationInCompanyEvents','1')|int == 1 %}selected{% endif %}>Rarely (1–2/year)</option>
+              <option value="2" {% if form_data.get('ParticipationInCompanyEvents','1')|int == 2 %}selected{% endif %}>Sometimes (3–5/year)</option>
+              <option value="3" {% if form_data.get('ParticipationInCompanyEvents','1')|int == 3 %}selected{% endif %}>Often (6–10/year)</option>
+              <option value="4" {% if form_data.get('ParticipationInCompanyEvents','1')|int == 4 %}selected{% endif %}>Always (10+/year)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Mentorship Availability</label>
+            <select class="form-control" name="MentorshipAvailability" required>
+              <option value="0" {% if form_data.get('MentorshipAvailability','1')|int == 0 %}selected{% endif %}>Not Available</option>
+              <option value="1" {% if form_data.get('MentorshipAvailability','1')|int == 1 %}selected{% endif %}>Partially Available</option>
+              <option value="2" {% if form_data.get('MentorshipAvailability','1')|int == 2 %}selected{% endif %}>Fully Available</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Late Arrival Count (last 12 months)</label>
+            <input class="form-control" type="number" name="LateArrivalCount" min="0" max="365" value="{{ form_data.get('LateArrivalCount','0') }}" required>
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" id="submit-btn">

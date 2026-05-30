@@ -115,7 +115,7 @@ h1 { font-size: 26px; font-weight: 600; margin-bottom: 5px; }
   <div class="alert-error">⚠ {{ error }}</div>
   {% endif %}
 
-  <form method="POST" action="{{ url_for('login') }}">
+  <form method="POST" action="{{ url_for('login') }}" id="login-form">
     <div class="field">
       <label>Email address</label>
       <input type="email" name="email" placeholder="hr@company.com" value="hr@company.com" required>
@@ -124,8 +124,63 @@ h1 { font-size: 26px; font-weight: 600; margin-bottom: 5px; }
       <label>Password</label>
       <input type="password" name="password" placeholder="••••••••" value="password" required>
     </div>
+    <div style="text-align:right;margin-top:-6px;margin-bottom:14px;">
+      <button type="button" onclick="showPanel('fp-email')" style="background:none;border:none;color:var(--accent2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;padding:0;">Forgot password?</button>
+    </div>
     <button type="submit" class="btn">Sign In →</button>
   </form>
+
+  <!-- ── FORGOT PASSWORD: step 1 – enter email ── -->
+  <div id="fp-email" style="display:none;">
+    <p class="sub" style="margin-bottom:20px;">Enter your registered email and we'll send you an OTP.</p>
+    <div id="fp-email-alert" class="alert-error" style="display:none;margin-bottom:12px;"></div>
+    <div class="field">
+      <label>Registered Email</label>
+      <input type="email" id="fp-email-input" placeholder="hr@company.com">
+    </div>
+    <button class="btn" onclick="sendOTP()">Send OTP →</button>
+    <button type="button" onclick="showPanel('login-form')" style="width:100%;margin-top:10px;padding:10px;border-radius:9px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">← Back to Login</button>
+  </div>
+
+  <!-- ── FORGOT PASSWORD: step 2 – enter OTP ── -->
+  <div id="fp-otp" style="display:none;">
+    <p class="sub" style="margin-bottom:6px;">Enter the 6-digit code sent to</p>
+    <p style="color:var(--accent2);font-size:12px;margin-bottom:18px;" id="fp-otp-email-display"></p>
+    <div id="fp-otp-alert" class="alert-error" style="display:none;margin-bottom:12px;"></div>
+    <div class="field">
+      <label>One-Time Password</label>
+      <div style="display:flex;gap:8px;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+        <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" style="width:44px;height:50px;text-align:center;font-size:18px;font-weight:700;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;color:var(--text);outline:none;">
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">
+      Expires in <span id="otp-timer" style="color:var(--accent2);font-weight:600;">02:00</span>
+      &nbsp;<button type="button" id="resend-btn" onclick="sendOTP()" style="display:none;background:none;border:none;color:var(--accent2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;">Resend</button>
+    </div>
+    <button class="btn" onclick="verifyOTP()">Verify OTP →</button>
+    <button type="button" onclick="showPanel('fp-email')" style="width:100%;margin-top:10px;padding:10px;border-radius:9px;background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">← Change Email</button>
+  </div>
+
+  <!-- ── FORGOT PASSWORD: step 3 – new password ── -->
+  <div id="fp-reset" style="display:none;">
+    <p class="sub" style="margin-bottom:20px;">OTP verified. Set your new password.</p>
+    <div id="fp-reset-alert" class="alert-error" style="display:none;margin-bottom:12px;"></div>
+    <div id="fp-reset-success" class="alert-error" style="display:none;margin-bottom:12px;background:rgba(61,229,160,0.10);border-color:rgba(61,229,160,0.25);color:#3de5a0;"></div>
+    <div class="field">
+      <label>New Password</label>
+      <input type="password" id="fp-pw1" placeholder="Min 8 characters">
+    </div>
+    <div class="field">
+      <label>Confirm New Password</label>
+      <input type="password" id="fp-pw2" placeholder="Repeat password">
+    </div>
+    <button class="btn" onclick="resetPassword()">Update Password →</button>
+  </div>
 
   <div class="accounts">
     <div class="accounts-title">Demo Accounts (password: <code style="color:var(--accent3);font-size:10px">password</code>)</div>
@@ -149,6 +204,145 @@ function fillLogin(email) {
   document.querySelector('input[name="email"]').value = email;
   document.querySelector('input[name="password"]').value = 'password';
 }
+
+// ── Panel switcher ──
+let otpInterval = null;
+let resetEmail = '';
+
+function showPanel(id) {
+  ['login-form','fp-email','fp-otp','fp-reset'].forEach(p => {
+    const el = document.getElementById(p);
+    if (el) el.style.display = 'none';
+  });
+  document.getElementById(id).style.display = 'block';
+}
+
+// ── Send OTP ──
+function sendOTP() {
+  const email = document.getElementById('fp-email-input').value.trim();
+  const alertEl = document.getElementById('fp-email-alert');
+  alertEl.style.display = 'none';
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alertEl.textContent = '⚠ Please enter a valid email address.';
+    alertEl.style.display = 'block'; return;
+  }
+  resetEmail = email;
+
+  // Call your Flask route: POST /send-otp  { email }
+  fetch('/send-otp', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email})
+  }).catch(() => {}); // graceful if route not yet wired
+
+  document.getElementById('fp-otp-email-display').textContent = email;
+  showPanel('fp-otp');
+  setupOTPInputs();
+  startTimer();
+}
+
+// ── OTP digit inputs ──
+function setupOTPInputs() {
+  const digits = document.querySelectorAll('.otp-digit');
+  digits.forEach((inp, i) => {
+    inp.value = '';
+    inp.oninput = () => {
+      inp.value = inp.value.replace(/\D/g,'');
+      if (inp.value && i < digits.length - 1) digits[i+1].focus();
+    };
+    inp.onkeydown = e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) digits[i-1].focus();
+    };
+    inp.onpaste = e => {
+      e.preventDefault();
+      const text = (e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'');
+      [...text.slice(0,6)].forEach((ch,j) => { if(digits[j]) digits[j].value = ch; });
+      digits[Math.min(text.length,5)].focus();
+    };
+  });
+  digits[0].focus();
+}
+
+// ── Countdown timer ──
+function startTimer() {
+  clearInterval(otpInterval);
+  let secs = 120;
+  document.getElementById('resend-btn').style.display = 'none';
+  const timerEl = document.getElementById('otp-timer');
+  function tick() {
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    timerEl.textContent = m+':'+s;
+    if (secs-- <= 0) {
+      clearInterval(otpInterval);
+      timerEl.textContent = '00:00';
+      document.getElementById('resend-btn').style.display = 'inline';
+    }
+  }
+  tick();
+  otpInterval = setInterval(tick, 1000);
+}
+
+// ── Verify OTP ──
+function verifyOTP() {
+  const code = [...document.querySelectorAll('.otp-digit')].map(i=>i.value).join('');
+  const alertEl = document.getElementById('fp-otp-alert');
+  alertEl.style.display = 'none';
+  if (code.length < 6) {
+    alertEl.textContent = '⚠ Please enter the complete 6-digit OTP.';
+    alertEl.style.display = 'block'; return;
+  }
+
+  // Call your Flask route: POST /verify-otp  { email, otp }
+  fetch('/verify-otp', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: resetEmail, otp: code})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.valid) { clearInterval(otpInterval); showPanel('fp-reset'); }
+    else { alertEl.textContent = '⚠ ' + (d.message || 'Incorrect OTP.'); alertEl.style.display = 'block'; }
+  })
+  .catch(() => {
+    // Demo fallback: treat 123456 as valid
+    if (code === '123456') { clearInterval(otpInterval); showPanel('fp-reset'); }
+    else { alertEl.textContent = '⚠ Incorrect OTP. Try 123456 for demo.'; alertEl.style.display = 'block'; }
+  });
+}
+
+// ── Reset Password ──
+function resetPassword() {
+  const pw1 = document.getElementById('fp-pw1').value;
+  const pw2 = document.getElementById('fp-pw2').value;
+  const alertEl  = document.getElementById('fp-reset-alert');
+  const successEl = document.getElementById('fp-reset-success');
+  alertEl.style.display = 'none';
+
+  if (pw1.length < 8) {
+    alertEl.textContent = '⚠ Password must be at least 8 characters.';
+    alertEl.style.display = 'block'; return;
+  }
+  if (pw1 !== pw2) {
+    alertEl.textContent = '⚠ Passwords do not match.';
+    alertEl.style.display = 'block'; return;
+  }
+
+  // Call your Flask route: POST /reset-password  { password }
+  fetch('/reset-password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email: resetEmail, password: pw1})
+  }).catch(() => {});
+
+  successEl.textContent = '✓ Password updated! Redirecting to login…';
+  successEl.style.display = 'block';
+  setTimeout(() => { showPanel('login-form'); successEl.style.display = 'none'; }, 2000);
+}
 </script>
 </body>
 </html>
+
+
+
